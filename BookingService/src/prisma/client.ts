@@ -1,11 +1,13 @@
+import { dbConfig } from "../config";
 import { PrismaClient } from "../generated/prisma/client";
-// Import the driver adapter for your specific database (example uses PostgreSQL)
-import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaMariaDb } from "@prisma/adapter-mariadb";
 
-// Initialize the adapter according to your driver's requirements
-const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
+const adapter = new PrismaMariaDb({
+  host: dbConfig.DB_HOST,
+  user: dbConfig.DB_USER,
+  password: dbConfig.DB_PASSWORD,
+  database: dbConfig.DB_NAME,
+  port: 3306,
+});
 
-// Pass the adapter instance to PrismaClient
-const prisma = new PrismaClient({ adapter });
-
-export default prisma;
+export const prisma = new PrismaClient({ adapter });
