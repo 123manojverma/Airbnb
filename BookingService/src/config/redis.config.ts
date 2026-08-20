@@ -1,12 +1,32 @@
-import IORedis from "ioredis"
+import IORedis, { Redis } from "ioredis"
 import Redlock from "redlock"
 import { serverConfig } from "."
 
-export const redisClient=new IORedis(serverConfig.REDIS_SERVER_URL);
+// export const redisClient=new IORedis(serverConfig.REDIS_SERVER_URL);
 
-export const redlock=new Redlock([redisClient as any],{
+function connectToRedis(){
+    try{
+        let connection: Redis;
+
+        return ()=>{
+            if(!connection){
+                connection=new IORedis(serverConfig.REDIS_SERVER_URL);
+                return connection;
+            }
+            return connection;
+        }
+        
+    }catch(error){
+        console.error('Error connecting to Redis',error);
+        throw error
+    }
+}
+
+export const getRedisConnObject=connectToRedis();
+
+export const redlock=new Redlock([getRedisConnObject() as any],{
     driftFactor:0.01, // time in ms
     retryCount:10,
     retryDelay:200,
     retryJitter:200
-})
+})    
