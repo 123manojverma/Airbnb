@@ -6,6 +6,7 @@ import (
 	db "AuthInGo/db/repositories"
 	"AuthInGo/router"
 	"AuthInGo/services"
+	"database/sql"
 	"fmt"
 	"net/http"
 	"time"
@@ -35,9 +36,9 @@ func NewApplication(cfg Config) *Application{
 	}
 }
 
-func (app *Application) Run() error {
+func (app *Application) Run(Db *sql.DB) error {
 
-	ur:=db.NewUserRepository()
+	ur:=db.NewUserRepository(Db)
 	us:=services.NewUserService(ur)
 	uc:=controllers.NewUserController(us)
 	uRouter:=router.NewUserRouter(uc)

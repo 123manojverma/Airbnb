@@ -2,8 +2,8 @@ package main
 
 import (
 	"AuthInGo/app"
-	config "AuthInGo/config/env"
 	dbConfig "AuthInGo/config/db"
+	config "AuthInGo/config/env"
 )
 
 func main() {
@@ -12,7 +12,9 @@ func main() {
 
 	cfg:=app.NewConfig()
 	app:=app.NewApplication(cfg)
-	dbConfig.SetupDB()
-
-	app.Run()
+	db,err:=dbConfig.SetupDB()
+	if err!=nil{
+		return
+	}
+	app.Run(db)
 }

@@ -4,7 +4,6 @@ import (
 	config "AuthInGo/config/env"
 	"database/sql"
 	"fmt"
-
 	"github.com/go-sql-driver/mysql"
 )
 
