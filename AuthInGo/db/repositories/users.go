@@ -96,13 +96,13 @@ func (u *UserRepositoryImpl) DeleteById() error{
 }
 
 func (u *UserRepositoryImpl) GetByEmail(data *models.User) (*models.User,error) {
-	query:="SELECT id,username,email,password,created_at,updated_at FROM users WHERE email = ?"
+	query:="SELECT id,email,password FROM users WHERE email = ?"
 
 	row := u.db.QueryRow(query, data.Email)
 
 	user:=&models.User{}
 
-	err:=row.Scan(&user.Id,&user.Username,&user.Email,&user.Password,&user.Created_at,&user.Updated_at)
+	err:=row.Scan(&user.Id,&user.Email,&user.Password)
 
 	if err!=nil{
 		if err==sql.ErrNoRows{

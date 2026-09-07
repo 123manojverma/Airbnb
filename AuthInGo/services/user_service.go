@@ -1,16 +1,19 @@
 package services
 
 import (
+	config "AuthInGo/config/env"
 	db "AuthInGo/db/repositories"
 	"AuthInGo/models"
 	"AuthInGo/utils"
 	"fmt"
+
+	"github.com/golang-jwt/jwt/v5"
 )
 
 type UserService interface {
 	GetUserById(id int64) (*models.User,error)
 	Create(user *models.User) error
-	LoginUser(user *models.User) (token string, err error)
+	LoginUser(user *models.User) (string, error)
 }
 
 type UserServiceImpl struct {
@@ -46,12 +49,29 @@ func(u *UserServiceImpl) Create(user *models.User) error{
 	return nil
 }
 
-func (u *UserServiceImpl) LoginUser(user *models.User) (token string,err error) {
+func (u *UserServiceImpl) LoginUser(user *models.User) (string,error) {
 	user1,err:=u.userRepository.GetByEmail(user)
 	if err!=nil {
 		return "",err
 	}
 	response:=utils.CheckPasswordHash(user.Password,user1.Password)
 	fmt.Println("Login response:",response)
-	return user1.Password,nil
+
+	payload:=jwt.MapClaims{
+		"email":user1.Email,
+		"id":user1.Id,
+	}
+
+	token:=jwt.NewWithClaims(jwt.SigningMethodHS256,payload)
+
+	tokenString,err:=token.SignedString([]byte(config.GetString("JWT_SECRET","TOKEN")))
+
+	if err!=nil{
+		fmt.Println("Error signing tokens:",err)
+		return "",err
+	}
+
+	fmt.Println("JWT Tokens:",tokenString)
+
+	return tokenString,nil
 }
