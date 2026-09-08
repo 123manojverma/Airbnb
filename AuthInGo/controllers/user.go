@@ -1,8 +1,10 @@
 package controllers
 
 import (
+	"AuthInGo/dto"
 	"AuthInGo/models"
 	"AuthInGo/services"
+	"AuthInGo/utils"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -64,34 +66,29 @@ func (uc *UserController) Create(w http.ResponseWriter, r *http.Request) {
 func (uc *UserController) LoginUser(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("LoginUser called in UserController")
 
-	var user models.User
+	var payload dto.LoginUserRequestDTO
 
-	err := json.NewDecoder(r.Body).Decode(&user)
-
-	if err != nil {
+	if jsonErr:= utils.ReadJsonBody(r,&payload); jsonErr != nil {
 		http.Error(
 			w, "Invalid request body", http.StatusBadRequest,
 		)
 		return
 	}
 
-	token, err := uc.UserService.LoginUser(&user)
-
-	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-
-		json.NewEncoder(w).Encode(map[string]string{
-			"error": "Invalid Password or Email",
-		})
+	if validationErr:=utils.Validator.Struct(payload); validationErr!=nil{
+		w.Write([]byte("Invalid input data"))
+		fmt.Println("Validation Err",validationErr)
 		return
 	}
 
-	w.Header().Set("Authorization", "Bearer "+token)
+	jwtToken, err := uc.UserService.LoginUser(&payload)
 
-	w.Header().Set("Content-Type", "application/json")
+	if err != nil {
+		utils.WriteJsonErrorResponse(w,http.StatusInternalServerError,"Failed to login user",err)
+		return
+	}
+	
+	w.Header().Set("Authorization", "Bearer "+jwtToken)
 
-	json.NewEncoder(w).Encode(map[string]string{
-		"message": "Login successful",
-	})
+	utils.WriteJsonSuccessResponse(w,http.StatusOK,"User logged in successfully",jwtToken)
 }

@@ -3,6 +3,7 @@ package router
 import (
 	"AuthInGo/controllers"
 
+	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -12,6 +13,9 @@ type Router interface{
 
 func SetupRouter(UserRouter Router) *chi.Mux {
 	chiRouter := chi.NewRouter()
+
+	// chiRouter.Use(middlewares.RequestLogger) // Middleware for logging requests
+	chiRouter.Use(middleware.Logger) // Built-in Chi middleware for logging requests
 
 	chiRouter.Get("/ping",controllers.PingHandler)
 

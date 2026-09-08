@@ -3,6 +3,7 @@ package services
 import (
 	config "AuthInGo/config/env"
 	db "AuthInGo/db/repositories"
+	"AuthInGo/dto"
 	"AuthInGo/models"
 	"AuthInGo/utils"
 	"fmt"
@@ -11,9 +12,9 @@ import (
 )
 
 type UserService interface {
-	GetUserById(id int64) (*models.User,error)
-	Create(user *models.User) error
-	LoginUser(user *models.User) (string, error)
+	GetUserById(int64) (*models.User,error)
+	Create(*models.User) error
+	LoginUser(*dto.LoginUserRequestDTO) (string, error)
 }
 
 type UserServiceImpl struct {
@@ -49,20 +50,20 @@ func(u *UserServiceImpl) Create(user *models.User) error{
 	return nil
 }
 
-func (u *UserServiceImpl) LoginUser(user *models.User) (string,error) {
-	user1,err:=u.userRepository.GetByEmail(user)
+func (u *UserServiceImpl) LoginUser(payload *dto.LoginUserRequestDTO) (string,error) {
+	user1,err:=u.userRepository.GetByEmail(payload)
 	if err!=nil {
 		return "",err
 	}
-	response:=utils.CheckPasswordHash(user.Password,user1.Password)
+	response:=utils.CheckPasswordHash(payload.Password,user1.Password)
 	fmt.Println("Login response:",response)
 
-	payload:=jwt.MapClaims{
+	key:=jwt.MapClaims{
 		"email":user1.Email,
 		"id":user1.Id,
 	}
 
-	token:=jwt.NewWithClaims(jwt.SigningMethodHS256,payload)
+	token:=jwt.NewWithClaims(jwt.SigningMethodHS256,key)
 
 	tokenString,err:=token.SignedString([]byte(config.GetString("JWT_SECRET","TOKEN")))
 

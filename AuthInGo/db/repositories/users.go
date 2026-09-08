@@ -1,6 +1,7 @@
 package db
 
 import (
+	"AuthInGo/dto"
 	"AuthInGo/models"
 	"database/sql"
 	"fmt"
@@ -11,7 +12,7 @@ type UserRepository interface {
 	GetById(id int64) (*models.User,error)
 	GetAll() ([]*models.User,error)
 	DeleteById() error
-	GetByEmail(user *models.User) (*models.User,error)
+	GetByEmail(*dto.LoginUserRequestDTO) (*models.User,error)
 }
 
 type UserRepositoryImpl struct {
@@ -95,10 +96,10 @@ func (u *UserRepositoryImpl) DeleteById() error{
 	return nil
 }
 
-func (u *UserRepositoryImpl) GetByEmail(data *models.User) (*models.User,error) {
+func (u *UserRepositoryImpl) GetByEmail(payload *dto.LoginUserRequestDTO) (*models.User,error) {
 	query:="SELECT id,email,password FROM users WHERE email = ?"
 
-	row := u.db.QueryRow(query, data.Email)
+	row := u.db.QueryRow(query, payload.Email)
 
 	user:=&models.User{}
 
