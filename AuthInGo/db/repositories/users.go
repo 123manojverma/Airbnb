@@ -8,10 +8,10 @@ import (
 )
 
 type UserRepository interface {
-	Create(user *models.User) error
+	Create(user *dto.CreateUserRequestDTO) (*models.User,error)
 	GetById(id int64) (*models.User,error)
-	GetAll() ([]*models.User,error)
-	DeleteById() error
+	GetAll() ([]*models.User, error)
+	DeleteById(id int64) error
 	GetByEmail(*dto.LoginUserRequestDTO) (*models.User,error)
 }
 
@@ -25,37 +25,38 @@ func NewUserRepository(db *sql.DB) UserRepository {
 	}
 }
 
-func (u *UserRepositoryImpl) Create(user *models.User) error {
+func (u *UserRepositoryImpl) Create(payload *dto.CreateUserRequestDTO) (*models.User,error) {
 
 	query:="INSERT INTO users (username, email,password) VALUES (?, ?,?)"
 
 	result, err := u.db.Exec(
 		query,
-		user.Username,
-		user.Email,
-		user.Password,
+		payload.Username,
+		payload.Email,
+		payload.Password,
 	)
 
 	if err != nil {
-		fmt.Println("Error inserting user:",err)
-		return err
+		fmt.Println("Error creating user:",err)
+		return nil,err
 	}
 
-	rowsAffected,rowErr:=result.RowsAffected()
+	lastInsertID,rowErr:=result.RowsAffected()
 
 	if rowErr!=nil{
-		fmt.Println("Error getting rows affected:",rowErr)
-		return rowErr
+		fmt.Println("Error getting last insert ID:",rowErr)
+		return nil,rowErr
 	}
 
-	if rowsAffected==0{
-		fmt.Println("No rows were affected, user not created")
-		return  nil
+	user:=&models.User{
+		Id:lastInsertID,
+		Username: payload.Username,
+		Email: payload.Email,
 	}
 
-	fmt.Println("User created successfully, rows affected:",rowsAffected)
+	fmt.Println("User created successfully:",user)
 	
-	return nil
+	return user,nil
 }
 
 func (u *UserRepositoryImpl) GetById(id int64) (*models.User,error) {
@@ -89,10 +90,51 @@ func (u *UserRepositoryImpl) GetById(id int64) (*models.User,error) {
 }
 
 func (u *UserRepositoryImpl) GetAll() ([]*models.User,error){
-	return nil,nil
+	query := "SELECT id, username, email, created_at, updated_at FROM users"
+	rows, err := u.db.Query(query)
+	if err != nil {
+		fmt.Println("Error fetching users:", err)
+		return nil, err
+	}
+	defer rows.Close() // Ensure rows are closed after processing
+
+	var users []*models.User
+	for rows.Next() {
+		user := &models.User{}
+		if err := rows.Scan(&user.Id, &user.Username, &user.Email, &user.Created_at, &user.Updated_at); err != nil {
+			fmt.Println("Error scanning user:", err)
+			return nil, err
+		}
+		users = append(users, user)
+	}
+
+	if err := rows.Err(); err != nil {
+		fmt.Println("Error with rows:", err)
+		return nil, err
+	}
+
+	return users, nil
 }
 
-func (u *UserRepositoryImpl) DeleteById() error{
+func (u *UserRepositoryImpl) DeleteById(id int64) error{
+	query := "DELETE FROM users WHERE id = ?"
+	result, err := u.db.Exec(query, id)
+
+	if err != nil {
+		fmt.Println("Error deleting user:", err)
+		return err
+	}
+
+	rowsAffected, rowErr := result.RowsAffected()
+	if rowErr != nil {
+		fmt.Println("Error getting rows affected:", rowErr)
+		return rowErr
+	}
+	if rowsAffected == 0 {
+		fmt.Println("No rows were affected, user not deleted")
+		return nil
+	}
+	fmt.Println("User deleted successfully, rows affected:", rowsAffected)
 	return nil
 }
 
