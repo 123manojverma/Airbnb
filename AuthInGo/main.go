@@ -12,9 +12,5 @@ func main() {
 
 	cfg:=app.NewConfig()
 	app:=app.NewApplication(cfg)
-	db,err:=dbConfig.SetupDB()
-	if err!=nil{
-		return
-	}
-	app.Run(db)
+	app.Run(dbConfig.Db)
 }

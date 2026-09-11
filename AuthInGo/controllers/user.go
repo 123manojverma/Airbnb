@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"AuthInGo/dto"
+	"AuthInGo/middlewares"
 	"AuthInGo/services"
 	"AuthInGo/utils"
 	"encoding/json"
@@ -23,7 +24,8 @@ func NewUserController(_userService services.UserService) *UserController {
 func (uc *UserController) GetUserById(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("GetUserById called in UserController")
 	// userId := r.URL.Query().Get("id")
-	userId,ok:=r.Context().Value("userId").(string)
+	userId,ok:=r.Context().Value(middlewares.ContextKeyUserID).(string)
+	fmt.Println("User ID:",userId,ok)
 	if !ok{
 		utils.WriteJsonErrorResponse(w, http.StatusBadRequest, "User ID is required", fmt.Errorf("missing user ID"))
 		return

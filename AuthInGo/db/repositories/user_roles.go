@@ -12,6 +12,7 @@ type UserRoleRepository interface {
 	GetUserPermissions(userId int64) ([]*models.Permission,error)
 	HasPermission(userId int64,permissionName string) (bool,error)
 	HasRole(userId int64,roleName string) (bool,error)
+	HasAllRoles(userId int64,roleNames []string) (bool,error)
 }
 
 type UserRoleRepositoryImpl struct {
@@ -105,3 +106,14 @@ func (r *UserRoleRepositoryImpl) HasRole(userId int64,roleName string) (bool,err
 	}
 	return exists, nil
 }
+
+func (r *UserRoleRepositoryImpl) HasAllRoles(userId int64,roleNames []string) (bool,error){
+	// create a query to check if the user has all the roles
+	query:=`SELECT EXISTS(SELECT 1 FROM roles r JOIN user_roles ur ON r.id = ur.role_id WHERE ur.user_id = ? AND r.name IN (?))`
+	var exists bool
+	err := r.db.QueryRow(query, userId, roleNames).Scan(&exists)
+	if err != nil {
+		return false, err
+	}
+	return exists, nil
+}	

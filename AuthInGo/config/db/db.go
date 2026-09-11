@@ -7,7 +7,24 @@ import (
 	"github.com/go-sql-driver/mysql"
 )
 
-func SetupDB() (*sql.DB,error) {
+var Db *sql.DB
+
+func init(){
+	config.Load()
+	
+	fmt.Println("Initializing database configuration...")
+	var err error
+	Db, err = setupDB()
+
+	if err!=nil {
+		fmt.Println("Error initializing database:",err)
+		return
+	}
+
+	fmt.Println("Database initialized successfully.")
+}
+
+func setupDB() (*sql.DB,error) {
 	cfg:=mysql.NewConfig()
 
 	cfg.User=config.GetString("DB_USER","root")
