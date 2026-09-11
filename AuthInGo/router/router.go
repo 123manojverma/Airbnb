@@ -13,7 +13,7 @@ type Router interface{
 	Register(r chi.Router)
 }
 
-func SetupRouter(UserRouter Router) *chi.Mux {
+func SetupRouter(UserRouter Router,RoleRouter Router) *chi.Mux {
 	chiRouter := chi.NewRouter()
 
 	// chiRouter.Use(middlewares.RequestLogger) // Middleware for logging requests
@@ -25,6 +25,8 @@ func SetupRouter(UserRouter Router) *chi.Mux {
 	chiRouter.With(middlewares.JWTAuthMiddleware).HandleFunc("/fakestoreservice/*",utils.ProxyToService("https://fakestoreapi.com/","/fakestoreservice"))
 
 	UserRouter.Register(chiRouter)
+
+	RoleRouter.Register(chiRouter)
 
 	return chiRouter
 }

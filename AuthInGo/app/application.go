@@ -38,14 +38,20 @@ func NewApplication(cfg Config) *Application{
 
 func (app *Application) Run(Db *sql.DB) error {
 
-	ur:=db.NewUserRepository(Db)
-	us:=services.NewUserService(ur)
-	uc:=controllers.NewUserController(us)
-	uRouter:=router.NewUserRouter(uc)
+	ur := db.NewUserRepository(Db)
+	rr := db.NewRoleRepository(Db)
+	rpr := db.NewRolePermissionRepository(Db)
+	urr := db.NewUserRoleRepository(Db)
+	us := services.NewUserService(ur)
+	rs := services.NewRoleService(rr, rpr, urr)
+	uc := controllers.NewUserController(us)
+	rc := controllers.NewRoleController(rs)
+	uRouter := router.NewUserRouter(uc)
+	rRouter := router.NewRoleRouter(rc)
 
 	server := &http.Server{
 		Addr:         app.Config.Addr,
-		Handler:      router.SetupRouter(uRouter),
+		Handler:      router.SetupRouter(uRouter,rRouter),
 		ReadTimeout:  10 * time.Second, // Set read timeout to 10 seconds
 		WriteTimeout: 10 * time.Second, // Set write timeout to 10 seconds
 	}
