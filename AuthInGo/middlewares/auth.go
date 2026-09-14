@@ -42,76 +42,123 @@ func JWTAuthMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		claims:=jwt.MapClaims{}
+		claims := jwt.MapClaims{}
 
-		_,err:=jwt.ParseWithClaims(token,&claims,func(t *jwt.Token) (any, error) {
-			return []byte(env.GetString("JWT_SECRET","TOKEN")),nil
+		_, err := jwt.ParseWithClaims(token, &claims, func(t *jwt.Token) (any, error) {
+			return []byte(env.GetString("JWT_SECRET", "TOKEN")), nil
 		})
 
-		if err!=nil{
-			http.Error(w,"Invalid token: "+err.Error(),http.StatusUnauthorized)
-			return 
+		if err != nil {
+			http.Error(w, "Invalid token: "+err.Error(), http.StatusUnauthorized)
+			return
 		}
 
-		userId,okId:=claims["id"].(float64)
+		userIdFloat, okId := claims["id"].(float64)
+		email, okEmail := claims["email"].(string)
 
-		email,okEmail:=claims["email"].(string)
-
-		if !okId || !okEmail {
-			http.Error(w,"Invalid token claims",http.StatusUnauthorized)
-			return 
+		if !okId || !okEmail || email == "" {
+			http.Error(w, "Invalid token claims", http.StatusUnauthorized)
+			return
 		}
 
-		fmt.Println("Authenticated user ID:",userId,"Email:",email)
+		userId := userIdFloat
 
-		ctx:=context.WithValue(r.Context(),ContextKeyUserID,strconv.FormatFloat(userId,'f',0,64))
-		ctx=context.WithValue(ctx,ContextKeyEmail,email)
-		next.ServeHTTP(w,r.WithContext(ctx))
+		fmt.Println("Authenticated user ID:", userId, "Email:", email)
+
+		ctx := context.WithValue(r.Context(), ContextKeyUserID, strconv.FormatFloat(userId, 'f', 0, 64))
+		ctx = context.WithValue(ctx, ContextKeyEmail, email)
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
-func RequireAllRoles(roles ...string) func(http.Handler) http.Handler{
-	
+func RequireAllRoles(roles ...string) func(http.Handler) http.Handler {
+
 	// function that can create a middleware for checking the above set of roles
-	
+
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-			userIdStr,ok:=r.Context().Value(ContextKeyUserID).(string)
-			if !ok || userIdStr=="" {
-				http.Error(w,"Unauthorized",http.StatusUnauthorized)
+			userIdStr, ok := r.Context().Value(ContextKeyUserID).(string)
+			if !ok || userIdStr == "" {
+				http.Error(w, "Unauthorized", http.StatusUnauthorized)
 				return
 			}
 
-			userId,err:=strconv.ParseInt(userIdStr,10,64)
-			if err!=nil{
-				http.Error(w,"Invalid user ID",http.StatusBadRequest)
-				return 
+			userId, err := strconv.ParseInt(userIdStr, 10, 64)
+			if err != nil {
+				http.Error(w, "Invalid user ID", http.StatusBadRequest)
+				return
 			}
 
-			dbConn:=config.Db
+			dbConn := config.Db
 
-			if dbConn==nil{
-				http.Error(w,"Database connection error",http.StatusInternalServerError)
-				return 
+			if dbConn == nil {
+				http.Error(w, "Database connection error", http.StatusInternalServerError)
+				return
 			}
 
-			urr:=repo.NewUserRoleRepository(dbConn)
+			urr := repo.NewUserRoleRepository(dbConn)
 
-			allRoles,err:=urr.HasAllRoles(userId,roles)
+			allRoles, err := urr.HasAllRoles(userId, roles)
 
-			if err!=nil{
-				http.Error(w,"Error checking roles: "+err.Error(),http.StatusInternalServerError)
-				return 
+			fmt.Println("userid", userId, "roles", roles, "hasAllRoles", allRoles)
+
+			if err != nil {
+				http.Error(w, "Error checking roles: "+err.Error(), http.StatusInternalServerError)
+				return
 			}
 			if !allRoles {
-				http.Error(w,"User does not have all required roles",http.StatusForbidden)
-				return 
+				http.Error(w, "User does not have all required roles", http.StatusForbidden)
+				return
 			}
 
-			fmt.Println("User has all required roles:",roles)
+			fmt.Println("User has all required roles:", roles)
 
-			next.ServeHTTP(w,r)
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+func RequireAnyRole(roles ...string) func(http.Handler) http.Handler {
+
+	return func(next http.Handler) http.Handler {
+
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			userIdStr, ok := r.Context().Value(ContextKeyUserID).(string)
+			if !ok || userIdStr == "" {
+				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				return
+			}
+
+			userId, err := strconv.ParseInt(userIdStr, 10, 64)
+			if err != nil {
+				http.Error(w, "Invalid user ID", http.StatusUnauthorized)
+				return
+			}
+
+			dbConn := config.Db
+			if dbConn == nil {
+				http.Error(w, "Database connection error", http.StatusInternalServerError)
+				return
+			}
+
+			urr := repo.NewUserRoleRepository(dbConn)
+
+			hasAnyRole, hasAnyRolesErr := urr.HasAnyRole(userId, roles)
+			fmt.Println("userid", userId, "roles", roles, "hasAnyRole", hasAnyRole)
+			if hasAnyRolesErr != nil {
+				http.Error(w, "Error checking user roles: "+hasAnyRolesErr.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			if !hasAnyRole {
+				http.Error(w, "Forbidden: You do not have the required roles", http.StatusForbidden)
+				return
+			}
+
+			fmt.Println("User has all required roles:", roles)
+
+			next.ServeHTTP(w, r)
 		})
 	}
 }

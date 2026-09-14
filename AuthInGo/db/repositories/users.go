@@ -41,17 +41,16 @@ func (u *UserRepositoryImpl) Create(payload *dto.CreateUserRequestDTO) (*models.
 		return nil,err
 	}
 
-	lastInsertID,rowErr:=result.RowsAffected()
-
-	if rowErr!=nil{
-		fmt.Println("Error getting last insert ID:",rowErr)
-		return nil,rowErr
+	lastInsertID, rowErr := result.LastInsertId()
+	if rowErr != nil {
+		fmt.Println("Error getting last insert ID:", rowErr)
+		return nil, rowErr
 	}
 
-	user:=&models.User{
-		Id:lastInsertID,
+	user := &models.User{
+		Id:       lastInsertID,
 		Username: payload.Username,
-		Email: payload.Email,
+		Email:    payload.Email,
 	}
 
 	fmt.Println("User created successfully:",user)
